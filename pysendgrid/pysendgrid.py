@@ -39,6 +39,12 @@ class SendGrid(object):
                 "add": "/api/newsletter/identity/add.json",
                 "list": "/api/newsletter/identity/list.json",
                 "get": "/api/newsletter/identity/get.json"},
+            "subuser":{ #create new subuser
+                "add": "/apiv2/customer.add.json",
+                "list": "/apiv2/customer.profile.json"},
+            "sendip":{ #create new subuser
+                "add": "/apiv2/customer.sendip.json",
+                "get": "/apiv2/customer.ip.json"}
         }
 
     def build_params(self, d=None):
@@ -108,15 +114,21 @@ class SendGrid(object):
     def list_identity(self, name=None):
         return self.call('identity', 'list', {"name": name} if name else {})
 
+    def add_identity(self, **fields):
+        '''Fields required are: city, state, zip, address, country, name, email, identity'''
+        return self.call('identity', 'add', dict(**fields))
+
+    def get_identity(self, identity):
+        return self.call('identity', 'get', {"identity": identity})
+
     def add_list(self, name):
         return self.call('lists', 'add', {"list": name})
 
-    def get_list(self, name):
+    def get_list(self, name=None):
         return self.call('lists', 'get', {"list": name} if name else {})
 
-    def add_email_to(self, list_name, **fields):
-        data = json.dumps(fields)
-        return self.call('email', 'add', dict(list=list_name, data=data))
+    def add_email_to(self, **fields):
+        return self.call('email', 'add', dict(**fields))
 
     def add_emails_to(self, list_name, emails):
         """adds a list of emails
@@ -152,6 +164,16 @@ class SendGrid(object):
         else:
             d = dict(name=newsletter_name)
         return self.call('schedule', 'add', d)
+
+    def add_subuser(self, **fields):
+        return self.call('subuser', 'add', dict(**fields))
+
+    def list_subusers(self):
+        return self.call('subuser', 'list', dict(task="get"))
+
+    def add_sendip(self, **fields):
+        '''Fields can be task, user, set, ip'''
+        return self.call('sendip', 'add', dict(task="append", **fields))
 
     def warm_up_from_csv(self,
                         csv_path,  # name, email csv string (no header)
