@@ -20,7 +20,8 @@ class SendGrid(object):
                 "add": "/api/newsletter/add.json",
                 "edit": "/api/newsletter/edit.json",
                 "list": "/api/newsletter/list.json",
-                "get": "/api/newsletter/get.json"},
+                "get": "/api/newsletter/get.json",
+                "del": "/api/newsletter/delete.json"},
             "lists": {  # recipient lists
                 "add": "/api/newsletter/lists/add.json",
                 "edit": "/api/newsletter/lists/edit.json",
@@ -28,13 +29,16 @@ class SendGrid(object):
             "email": {  # emails of recipient list
                 "add": "/api/newsletter/lists/email/add.json",
                 "edit": "/api/newsletter/lists/email/edit.json",
-                "get": "/api/newsletter/lists/email/get.json"},
+                "get": "/api/newsletter/lists/email/get.json",
+                "del": "/api/newsletter/lists/email/delete.json"},
             "recipients": {  # recipients for a newsletter
                 "add": "/api/newsletter/recipients/add.json",
-                "get": "/api/newsletter/recipients/get.json"},
+                "get": "/api/newsletter/recipients/get.json",
+                "del": "/api/newsletter/delete.json"},
             "schedule": {  # schedule to send
                 "add": "/api/newsletter/schedule/add.json",
-                "get": "/api/newsletter/schedule/get.json"},
+                "get": "/api/newsletter/schedule/get.json",
+                "del": "/api/newsletter/schedule/delete.json"},
             "identity": {  # identities for newsletter
                 "add": "/api/newsletter/identity/add.json",
                 "list": "/api/newsletter/identity/list.json",
@@ -44,7 +48,17 @@ class SendGrid(object):
                 "list": "/apiv2/customer.profile.json"},
             "sendip":{ #create new subuser
                 "add": "/apiv2/customer.sendip.json",
-                "get": "/apiv2/customer.ip.json"}
+                "get": "/apiv2/customer.ip.json"},
+            "apps":{
+                "activate": "/apiv2/customer.apps.json",
+                "customize": "/apiv2/customer.apps.json"},
+            "category":{
+                "create": "/api/newsletter/category/create.json",
+                "del": "/api/newsletter/category/remove.json",
+                "list": "/api/newsletter/category/list.json",
+                "add": "/api/newsletter/category/add.json"},
+            "stats":{
+                "get": "/apiv2/customer.stats.json"}
         }
 
     def build_params(self, d=None):
@@ -98,6 +112,9 @@ class SendGrid(object):
                  html=html)
         return self.call('newsletter', 'add', d)
 
+    def del_newsletter(self, name):
+        return self.call('newsletter', 'del', dict(name=name))
+
     def clone_newsletter(self, existing_name, new_name):
         existing = self.get_newsletter(existing_name)['response']
         if isinstance(existing, dict):
@@ -130,6 +147,10 @@ class SendGrid(object):
     def add_email_to(self, **fields):
         return self.call('email', 'add', dict(**fields))
 
+    def del_email_from(self, **fields):
+        '''fields can be list, and email'''
+        return self.call('email', 'del', dict(**fields))
+
     def add_emails_to(self, list_name, emails):
         """adds a list of emails
         [{'email': 'jon@jon.com', 'name': 'Jon'}, {'email': 'mary@mary.com', 'name': 'Mary'}]
@@ -156,6 +177,12 @@ class SendGrid(object):
                 times = 0
         return api_call
 
+    def get_recipients(self, newsletter_name):
+        return self.call("recipients", "get", dict(name=newsletter_name))
+
+    def del_recipients(self, newsletter_name, list):
+        return self.call("recipients", "del", dict(newsletter_name, list))
+
     def add_schedule(self, newsletter_name, at=None, after=None):
         if at:
             d = dict(name=newsletter_name, at=at.isoformat())
@@ -164,6 +191,12 @@ class SendGrid(object):
         else:
             d = dict(name=newsletter_name)
         return self.call('schedule', 'add', d)
+
+    def get_schedule(self, name):
+        return self.call('schedule', 'get', dict(name=name))
+
+    def del_schedule(self, name):
+        return self.call('schedule', 'del', dict(name=name))
 
     def add_subuser(self, **fields):
         return self.call('subuser', 'add', dict(**fields))
@@ -174,6 +207,26 @@ class SendGrid(object):
     def add_sendip(self, **fields):
         '''Fields can be task, user, set, ip'''
         return self.call('sendip', 'add', dict(task="append", **fields))
+
+    def activate_app(self, user, name):
+        return self.call('apps', 'activate', dict(task="activate", user=user, name=name))
+
+    def customize_app(self, user, name, settings):
+        return self.call('apps', 'customize',
+            dict(task="setup", user=user, name=name, **settings))
+
+    def add_category(self, category, name):
+        return self.call('category', 'add', dict(category=category, name=name))
+
+    def create_category(self, category):
+        return self.call('category', 'create', dict(category=category))
+
+    def del_category(self, category, name):
+        return self.call('category', 'del', dict(category=category, name=name))
+
+    def get_category_stats(self, category, user):
+        '''other fields can be days, start_date, end_date'''
+        return self.call('stats', 'get', dict(category=category, user=user))
 
     def warm_up_from_csv(self,
                         csv_path,  # name, email csv string (no header)

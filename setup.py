@@ -2,7 +2,7 @@ from distutils.core import setup
 setup(
     name = 'pysendgrid',
     packages = ['pysendgrid'],
-    version = '0.24',
+    version = '0.25.6',
     author = 'Nick Bagley',
     author_email = 'nick@thrivehive.com',
     url = 'https://github.com/teasea33/pysendgrid',
