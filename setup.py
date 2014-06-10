@@ -1,6 +1,7 @@
 from distutils.core import setup
 setup(
     name = 'pysendgrid',
+    description='Python module for interacting with sendgrid api',
     packages = ['pysendgrid'],
     version = '0.25.6',
     author = 'Nick Bagley',
