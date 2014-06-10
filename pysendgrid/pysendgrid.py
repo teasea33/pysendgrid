@@ -25,7 +25,8 @@ class SendGrid(object):
             "lists": {  # recipient lists
                 "add": "/api/newsletter/lists/add.json",
                 "edit": "/api/newsletter/lists/edit.json",
-                "get": "/api/newsletter/lists/get.json"},
+                "get": "/api/newsletter/lists/get.json",
+                "del": "/api/newsletter/lists/delete.json"},
             "email": {  # emails of recipient list
                 "add": "/api/newsletter/lists/email/add.json",
                 "edit": "/api/newsletter/lists/email/edit.json",
@@ -43,22 +44,26 @@ class SendGrid(object):
                 "add": "/api/newsletter/identity/add.json",
                 "list": "/api/newsletter/identity/list.json",
                 "get": "/api/newsletter/identity/get.json"},
-            "subuser":{ #create new subuser
+            "subuser": {  # create new subuser
                 "add": "/apiv2/customer.add.json",
-                "list": "/apiv2/customer.profile.json"},
-            "sendip":{ #create new subuser
+                "list": "/apiv2/customer.profile.json",
+                "del": "/apiv2/customer.delete.json",
+                "edit": "/apiv2/customer.profile.json"},
+            "sendip": {  # create new subuser
                 "add": "/apiv2/customer.sendip.json",
                 "get": "/apiv2/customer.ip.json"},
-            "apps":{
+            "apps": {
                 "activate": "/apiv2/customer.apps.json",
                 "customize": "/apiv2/customer.apps.json"},
-            "category":{
+            "category": {
                 "create": "/api/newsletter/category/create.json",
                 "del": "/api/newsletter/category/remove.json",
                 "list": "/api/newsletter/category/list.json",
                 "add": "/api/newsletter/category/add.json"},
-            "stats":{
-                "get": "/apiv2/customer.stats.json"}
+            "stats": {
+                "get": "/apiv2/customer.stats.json"},
+            "unsubscribes": {
+                "get": "/api/unsubscribes.get.json"}
         }
 
     def build_params(self, d=None):
@@ -128,6 +133,11 @@ class SendGrid(object):
             return new
         return existing
 
+    def edit_newsletter(self, **fields):
+        '''fields must be name, newname, subject, text, html'''
+        identity = self.list_identity()['response'][0]['identity']
+        return self.call('newsletter', 'edit', dict(identity=identity, **fields))
+
     def list_identity(self, name=None):
         return self.call('identity', 'list', {"name": name} if name else {})
 
@@ -143,6 +153,12 @@ class SendGrid(object):
 
     def get_list(self, name=None):
         return self.call('lists', 'get', {"list": name} if name else {})
+
+    def del_list(self, name):
+        return self.call('lists', 'del', dict(list=name))
+
+    def edit_list(self, list, newlist):
+        return self.call('lists', 'edit', dict(list=list, newlist=newlist))
 
     def add_email_to(self, **fields):
         return self.call('email', 'add', dict(**fields))
@@ -185,6 +201,7 @@ class SendGrid(object):
 
     def add_schedule(self, newsletter_name, at=None, after=None):
         if at:
+            print "time ", at.isoformat()
             d = dict(name=newsletter_name, at=at.isoformat())
         elif after:
             d = dict(name=newsletter_name, after=after)
@@ -203,6 +220,14 @@ class SendGrid(object):
 
     def list_subusers(self):
         return self.call('subuser', 'list', dict(task="get"))
+
+    def del_subuser(self, user):
+        return self.call('subuser', 'del', dict(user=user))
+
+    def edit_subuser(self, user, **fields):
+        '''fields can be first_name, last_name, address, city, state, country, zip, phone,
+        website, company'''
+        return self.call('subuser', 'edit', dict(task="set", user=user, **fields))
 
     def add_sendip(self, **fields):
         '''Fields can be task, user, set, ip'''
@@ -227,6 +252,9 @@ class SendGrid(object):
     def get_category_stats(self, category, user):
         '''other fields can be days, start_date, end_date'''
         return self.call('stats', 'get', dict(category=category, user=user))
+
+    def get_unsubscribes(self):
+        return self.call('unsubscribes', 'get')
 
     def warm_up_from_csv(self,
                         csv_path,  # name, email csv string (no header)
