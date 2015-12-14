@@ -10,7 +10,7 @@ import re
 
 
 class SendGrid(object):
-    def __init__(self, api_user, api_key, url_base="https://sendgrid.com"):
+    def __init__(self, api_user, api_key, url_base="https://api.sendgrid.com"):
         self.api_user = api_user
         self.api_key = api_key
         self.url_base = url_base
@@ -35,7 +35,7 @@ class SendGrid(object):
             "recipients": {  # recipients for a newsletter
                 "add": "/api/newsletter/recipients/add.json",
                 "get": "/api/newsletter/recipients/get.json",
-                "del": "/api/newsletter/delete.json"},
+                "del": "/api/newsletter/recipients/delete.json"},
             "schedule": {  # schedule to send
                 "add": "/api/newsletter/schedule/add.json",
                 "get": "/api/newsletter/schedule/get.json",
@@ -63,7 +63,8 @@ class SendGrid(object):
             "stats": {
                 "get": "/apiv2/customer.stats.json"},
             "unsubscribes": {
-                "get": "/api/unsubscribes.get.json"}
+                "get": "/api/unsubscribes.get.json",
+                "add": "/api/unsubscribes.add.json"}
         }
 
     def build_params(self, d=None):
@@ -82,14 +83,14 @@ class SendGrid(object):
     def call(self, api, resource, params=None):
         url = self.build_url(api, resource)
         call_params = self.build_params(params or {})
-        response = requests.post(url, params=call_params)
-
+        response = requests.post(url, data=call_params)
         try:
             response_content = json.loads(response.content)
         except ValueError:
             response_content = {'error': re.search(r'<title>([^<]+)</title>', response.content).group(1)}
 
         with open("sendgrid.log", "a") as sendgridlog:
+            sendgridlog.write(str(url) + " " + json.dumps(call_params) + " at " + datetime.datetime.now().isoformat() + "\n")
             sendgridlog.write(str(response_content) + " at " + datetime.datetime.now().isoformat() + "\n")
 
         return dict(success=True,
@@ -135,8 +136,10 @@ class SendGrid(object):
 
     def edit_newsletter(self, **fields):
         '''fields must be name, newname, subject, text, html'''
-        identity = self.list_identity()['response'][0]['identity']
-        return self.call('newsletter', 'edit', dict(identity=identity, **fields))
+        identity = fields.pop('identity', None)
+        if identity is None:
+            identity = self.list_identity()['response'][0]['identity']
+        return self.call('newsletter', 'edit', dict(**fields))
 
     def list_identity(self, name=None):
         return self.call('identity', 'list', {"name": name} if name else {})
@@ -197,7 +200,7 @@ class SendGrid(object):
         return self.call("recipients", "get", dict(name=newsletter_name))
 
     def del_recipients(self, newsletter_name, list):
-        return self.call("recipients", "del", dict(newsletter_name, list))
+        return self.call("recipients", "del", dict(name=newsletter_name, list=list))
 
     def add_schedule(self, newsletter_name, at=None, after=None):
         if at:
@@ -255,6 +258,9 @@ class SendGrid(object):
 
     def get_unsubscribes(self):
         return self.call('unsubscribes', 'get')
+
+    def add_unsubscribe(self, email):
+        return self.call('unsubscribes', 'add', dict(email=email))
 
     def warm_up_from_csv(self,
                         csv_path,  # name, email csv string (no header)
