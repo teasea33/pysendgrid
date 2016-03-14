@@ -43,7 +43,9 @@ class SendGrid(object):
             "identity": {  # identities for newsletter
                 "add": "/api/newsletter/identity/add.json",
                 "list": "/api/newsletter/identity/list.json",
-                "get": "/api/newsletter/identity/get.json"},
+                "get": "/api/newsletter/identity/get.json",
+                "edit": "/api/newsletter/identity/edit.json",
+                "del": "/api/newsletter/identity/delete.json"},
             "subuser": {  # create new subuser
                 "add": "/apiv2/customer.add.json",
                 "list": "/apiv2/customer.profile.json",
@@ -89,9 +91,11 @@ class SendGrid(object):
         except ValueError:
             response_content = {'error': re.search(r'<title>([^<]+)</title>', response.content).group(1)}
 
-        with open("sendgrid.log", "a") as sendgridlog:
-            sendgridlog.write(str(url) + " " + json.dumps(call_params) + " at " + datetime.datetime.now().isoformat() + "\n")
-            sendgridlog.write(str(response_content) + " at " + datetime.datetime.now().isoformat() + "\n")
+        if int(response.status_code) != 200:
+            with open("sendgrid.log", "a") as sendgridlog:
+                sendgridlog.write(str(response.status_code))
+                sendgridlog.write(str(url) + " " + json.dumps(call_params) + " at " + datetime.datetime.now().isoformat() + "\n")
+                sendgridlog.write(str(response_content) + " at " + datetime.datetime.now().isoformat() + "\n")
 
         return dict(success=True,
                     status_code=response.status_code,
@@ -150,6 +154,12 @@ class SendGrid(object):
 
     def get_identity(self, identity):
         return self.call('identity', 'get', {"identity": identity})
+
+    def edit_identity(self, identity, **fields):
+        return self.call('identity', 'edit', dict(identity=identity, **fields))
+
+    def delete_identity(self, identity):
+        return self.call('identity', 'del', {"identity": identity})
 
     def add_list(self, name):
         return self.call('lists', 'add', {"list": name})
